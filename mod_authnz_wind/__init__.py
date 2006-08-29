@@ -10,10 +10,14 @@ ALT_AUTH_ARG = 'nowindauth'
 LOGOUT_ARG = 'windlogout'
 
 def authenhandler(req):
-    session = Session.Session(req)
+    if req.main is not None:
+        #only process on the main request
+        return apache.HTTP_UNAUTHORIZED
     q=req.parsed_uri[apache.URI_QUERY]
+    session = Session.Session(req)
+        
     args={}
-    if q:
+    if q is not None:
         args=util.parse_qs(q)
         
     if args.has_key(LOGOUT_ARG):
@@ -49,7 +53,9 @@ def authenhandler(req):
             return apache.OK
         else:
             redirectWind(req)
-    redirectWind(req)
+    else:
+        redirectWind(req)
+    return apache.HTTP_UNAUTHORIZED
 
 def authzhandler(req):
     """
