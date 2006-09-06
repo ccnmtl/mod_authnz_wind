@@ -1,5 +1,5 @@
 mod_wind with mod_python
-version:0.8
+version:0.9
 author:Schuyler Duveen
 email:sky@columbia.edu
 sponsor:Columbia Center for New Media Teaching and Learning
@@ -19,7 +19,7 @@ INSTALL
 -------
 Before you install, you should edit the constants at the top of the
 mod_authnz_wind/__init__.py.  Once you do that, if you have setup_tools, just
-run 'easy_install .' in the mod_authnz_wind directory
+run 'easy_install .' in the mod_authnz_wind directory with the file setup.py in it.
 
 You're on your own on installing mod_python, but it's a lot easier than 
 mod_perl.
@@ -45,14 +45,17 @@ directory and set it up like:
         PythonDebug On 
 	AuthType Wind
      	AuthName "Restricted Area"
-     	#require valid-user
-	require group unixgroup.cunix.local:columbia.edu
+     	require valid-user
+	#require group unixgroup.cunix.local:columbia.edu
 	#require user abc123 sbd12
 </Directory>
 
 
 CHANGES
 -------
+version 0.9
+ - fixed bug with apache sub-requests
+ - supports https
 version 0.8
  - no longer using Session across authz so code is less hacky and
    'PythonOption ApplicationPath /' is unnecessary

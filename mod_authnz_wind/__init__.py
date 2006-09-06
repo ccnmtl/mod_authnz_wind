@@ -91,11 +91,15 @@ def redirectWind(req):
                          '',
                          req.unparsed_uri)
     destination = re.sub('\&(?=(\&|\Z))','',destination)
+
+    port = ''
+    protocol = 'http'
     if req.parsed_uri[5]:
         port = ':'+str(req.parsed_uri[5])
-    else:
-        port = ''
-    util.redirect(req,LOGIN_URL+'?service=%s&destination=http://%s%s%s' % ( WIND_SERVICE,req.hostname,port,urllib.quote(destination) ))
+    if req.is_https():
+        protocol = 'https'
+        
+    util.redirect(req,LOGIN_URL+'?service=%s&destination=%s://%s%s%s' % ( WIND_SERVICE,protocol,req.hostname,port,urllib.quote(destination) ))
 
     
 def validate_wind_ticket(ticketid):
