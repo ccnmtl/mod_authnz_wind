@@ -10,15 +10,22 @@ ALT_AUTH_ARG = 'nowindauth'
 LOGOUT_ARG = 'windlogout'
 
 def authenhandler(req):
+    #apache.log_error( 'authenhandler')
     if req.main is not None:
         #defer to the main request's auth
         if hasattr(req.main,'user'):
             req.user = req.main.user
             if hasattr(req.main,'groups'):
                 req.groups = req.main.groups
-            return apach.OK
+            return apache.OK
         else:
             return apache.HTTP_UNAUTHORIZED
+    if req.connection.notes.has_key('user'):
+        #HACK:session only works per-request, and hangs when called by the same connection
+        req.user = req.connection.notes['user']
+        req.groups = ','.split(req.connection.notes['groups'])
+        return apache.OK
+
     session = Session.Session(req)
     q=req.parsed_uri[apache.URI_QUERY]
         
@@ -35,6 +42,8 @@ def authenhandler(req):
     if session.has_key('user'):
         req.user=session['user']
         req.groups=session['groups']
+        req.connection.notes['user']=req.user
+        req.connection.notes['groups']=','.join(req.groups)
         return apache.OK
 
     if args.has_key(ALT_AUTH_ARG):
@@ -52,6 +61,8 @@ def authenhandler(req):
             session['user']=validation[1]
             session['groups']=validation[2]
             req.groups=validation[2]
+            req.connection.notes['user']= req.user
+            req.connection.notes['groups']= ','.join(req.groups)
             session.save()
             #probably want to delete old user tickets
             #how to do that? user dict?
@@ -61,6 +72,7 @@ def authenhandler(req):
             redirectWind(req)
     else:
         redirectWind(req)
+    #should never get here
     return apache.HTTP_UNAUTHORIZED
 
 def authzhandler(req):
@@ -86,7 +98,6 @@ def authzhandler(req):
             for g in s[1:]:
                 if g in getattr(req,'groups',[]):
                     return apache.OK
-#    req.write(repr(groups)+repr(requires))
     return apache.HTTP_FORBIDDEN
 
 def redirectWind(req):
@@ -102,8 +113,12 @@ def redirectWind(req):
     protocol = 'http'
     if req.parsed_uri[5]:
         port = ':'+str(req.parsed_uri[5])
-    if req.is_https():
-        protocol = 'https'
+    try: #is_https() only in mod_python 3.2; try req.parsed_uri[0] for mod_python 3.1, but it doesn't always work
+        if req.is_https():
+            protocol = 'https'
+    except:
+        #apache.log_error( 'support for https requires mod_python 3.2')
+        pass
         
     util.redirect(req,LOGIN_URL+'?service=%s&destination=%s://%s%s%s' % ( WIND_SERVICE,protocol,req.hostname,port,urllib.quote(destination) ))
 
