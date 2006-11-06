@@ -1,12 +1,18 @@
 mod_wind with mod_python
-version:0.9
+version:0.9.1
 author:Schuyler Duveen
 email:sky@columbia.edu
 sponsor:Columbia Center for New Media Teaching and Learning
 
+This is an authentication/authorization handler for apache and mod_python which
+use Columbia University's Wind protocol:
+http://www.columbia.edu/acis/webdev/wind.html
+http://www.columbia.edu/acis/rad/authmethods/wind/index.html
+based largely on Yale's CAS authentication.
+
 This was done, because I didn't want to implement wind groups support
-in C.  However, it basically works exactly the same, and has an order of
-magnitude less code.
+in C (hacking mod_cas).  However, it basically works exactly the same,
+and has an order of magnitude less code.
 
 DOWNLOAD
 --------
@@ -18,8 +24,19 @@ http://svn.cc.columbia.edu/viewvc/auth/mod_authnz_wind/?root=ccnmtl
 INSTALL
 -------
 Before you install, you should edit the constants at the top of the
-mod_authnz_wind/__init__.py.  Once you do that, if you have setup_tools, just
-run 'easy_install .' in the mod_authnz_wind directory with the file setup.py in it.
+mod_authnz_wind/__init__.py.  
+
+Python and mod_python are necessary before continuing.  
+Once you do that, if you have setup_tools, just
+run 'easy_install .' in the mod_authnz_wind directory with the file setup.py in it.  Without setup_tools, the important thing is that mod_authnz_wind (with __init.__.py) is in a directory in mod_python's PYTHONPATH (usually someplace like /usr/lib/python2.4/site-packages).
+
+Note: The service that is entered for WIND_SERVICE in the init file should have the proper URI's established to what is being protected. If this is not setup properly, the user will never be authenticated.
+
+Once you do that, if you have setup_tools, just run 'easy_install .' in the mod_authnz_wind directory with the file setup.py in it. setup_tools is an optional package, and you might not have it installed, or in your path.
+
+Note: If you can not write to the Python directory, or want to install the module in a different location, you can install a virtual instance of python that is seperate. Directions for installing and using virtual python can be found at:
+
+    http://peak.telecommunity.com/DevCenter/EasyInstall#creating-a-virtual-python
 
 You're on your own on installing mod_python, but it's a lot easier than 
 mod_perl.
@@ -50,9 +67,16 @@ directory and set it up like:
 	#require user abc123 sbd12
 </Directory>
 
+TROUBLESHOOTING
+---------------
+1. Wind services are often url-specific.  If you're trying to set this up
+   at another URL/hostname then Wind won't forward after login, if your Wind service is not generic.
+2. The Wind service should be setup to return plain-text response (not XML)
 
 CHANGES
 -------
+version 0.9.1
+ - improve sub-request authorization
 version 0.9
  - fixed bug with apache sub-requests
  - supports https
@@ -65,3 +89,4 @@ TODO
 ----
 1. make constants configurable in apache conf
 2. handle the error strings that validate_windticket() returns better
+3. support Wind's XML format

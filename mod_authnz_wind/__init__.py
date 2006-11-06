@@ -11,10 +11,16 @@ LOGOUT_ARG = 'windlogout'
 
 def authenhandler(req):
     if req.main is not None:
-        #only process on the main request
-        return apache.HTTP_UNAUTHORIZED
-    q=req.parsed_uri[apache.URI_QUERY]
+        #defer to the main request's auth
+        if hasattr(req.main,'user'):
+            req.user = req.main.user
+            if hasattr(req.main,'groups'):
+                req.groups = req.main.groups
+            return apach.OK
+        else:
+            return apache.HTTP_UNAUTHORIZED
     session = Session.Session(req)
+    q=req.parsed_uri[apache.URI_QUERY]
         
     args={}
     if q is not None:
