@@ -1,3 +1,4 @@
+#version 0.9.2
 from mod_python import apache,util,Session
 import urllib,re
 
