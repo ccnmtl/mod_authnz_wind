@@ -1,5 +1,5 @@
 mod_wind with mod_python
-version:0.9.2
+version:0.9.3
 author:Schuyler Duveen
 email:sky@columbia.edu
 sponsor:Columbia Center for New Media Teaching and Learning
@@ -75,8 +75,8 @@ TROUBLESHOOTING
 
 CHANGES
 -------
-version 0.9.2
- - version hiccup
+version 0.9.3
+ - support for mod_python 3.1(.4) with subrequests
 version 0.9.1
  - improve sub-request authorization
 version 0.9
