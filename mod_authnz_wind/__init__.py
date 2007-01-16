@@ -166,6 +166,7 @@ def handler(req):
     """
     req.content_type = 'text/html'
     req.write("Hello World, %s\n" % req.user)
+    req.write("Groups: %s\n" % req.groups)
     req.write("<br />Required auth:"+repr(req.requires()))
     req.write('<br /><a href="%s?%s=true">logout</a>' % (req.uri, LOGOUT_ARG))
     return apache.OK
