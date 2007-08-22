@@ -1,8 +1,8 @@
-#version 0.9.3
+#version 0.9.4
 from mod_python import apache,util,Session
 import urllib,re
 
-WIND_SERVICE = 'cnmtl_full_np'
+WIND_SERVICE = '' #default Wind service= token
 LOGOUT_URL='https://wind.columbia.edu/logout'
 LOGIN_URL='https://wind.columbia.edu/login'
 VALIDATE_URL='https://wind.columbia.edu/validate'

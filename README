@@ -1,5 +1,5 @@
 mod_wind with mod_python
-version:0.9.3
+version:0.9.4
 author:Schuyler Duveen
 email:sky@columbia.edu
 sponsor:Columbia Center for New Media Teaching and Learning
@@ -23,14 +23,12 @@ http://svn.cc.columbia.edu/viewvc/auth/mod_authnz_wind/?root=ccnmtl
 
 INSTALL
 -------
-Before you install, you should edit the constants at the top of the
+Before you install, you may want to edit the constants at the top of the
 mod_authnz_wind/__init__.py.  
 
 Python and mod_python are necessary before continuing.  
 Once you do that, if you have setup_tools, just
 run 'easy_install .' in the mod_authnz_wind directory with the file setup.py in it.  Without setup_tools, the important thing is that mod_authnz_wind (with __init.__.py) is in a directory in mod_python's PYTHONPATH (usually someplace like /usr/lib/python2.4/site-packages).
-
-Note: The service that is entered for WIND_SERVICE in the init file should have the proper URI's established to what is being protected. If this is not setup properly, the user will never be authenticated.
 
 Once you do that, if you have setup_tools, just run 'easy_install .' in the mod_authnz_wind directory with the file setup.py in it. setup_tools is an optional package, and you might not have it installed, or in your path.
 
@@ -43,12 +41,14 @@ mod_perl.
 
 Once everything's installed, do something like this in your Apache Conf:
 <Directory>
+	#you MUST change the WindService to your service name
+	PythonOption WindService MY_WIND_SERVICE_HERE
 	PythonAuthenHandler mod_authnz_wind
         PythonAuthzHandler mod_authnz_wind
 	AuthType Wind
      	AuthName "Restricted Area"
-     	#require valid-user
-	require group unixgroup.cunix.local:columbia.edu
+     	require valid-user
+	#require group unixgroup.cunix.local:columbia.edu
 	#require user sbd12
 </Directory>
 
@@ -56,6 +56,7 @@ You might want to debug/test it by putting it in an apache-accessible
 directory and set it up like:
 <Directory>
         AddHandler mod_python .py
+	PythonOption WindService MY_WIND_SERVICE_HERE
 	PythonAuthenHandler mod_authnz_wind
         PythonAuthzHandler mod_authnz_wind
 	PythonHandler mod_authnz_wind
@@ -75,6 +76,8 @@ TROUBLESHOOTING
 
 CHANGES
 -------
+version 0.9.4
+ - PythonOption WindService so you don't have to hard code it
 version 0.9.3
  - support for mod_python 3.1(.4) with subrequests
 version 0.9.1
@@ -89,6 +92,5 @@ version 0.8
 
 TODO
 ----
-1. make constants configurable in apache conf
-2. handle the error strings that validate_windticket() returns better
-3. support Wind's XML format
+1. handle the error strings that validate_windticket() returns better
+2. support Wind's XML format
