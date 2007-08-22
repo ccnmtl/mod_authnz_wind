@@ -133,8 +133,11 @@ def redirectWind(req):
             protocol = 'https'
     except:
         apache.log_error( 'support for https requires mod_python 3.2', apache.APLOG_WARNING)
-        
-    util.redirect(req,LOGIN_URL+'?service=%s&destination=%s://%s%s%s' % ( WIND_SERVICE,protocol,req.hostname,port,urllib.quote(destination) ))
+
+    apache_options = req.get_options()
+    wind_service = apache_options.get('WindService',WIND_SERVICE)
+    
+    util.redirect(req,LOGIN_URL+'?service=%s&destination=%s://%s%s%s' % ( wind_service,protocol,req.hostname,port,urllib.quote(destination) ))
 
     
 def validate_wind_ticket(ticketid):
@@ -164,9 +167,13 @@ def handler(req):
     This is just for debugging purposes.
     This shouldn't be used as a content-handler
     """
+    apache_options = req.get_options()
+    wind_service = apache_options.get('WindService',WIND_SERVICE)
+
     req.content_type = 'text/html'
     req.write("Hello World, %s\n" % req.user)
     req.write("Groups: %s\n" % req.groups)
     req.write("<br />Required auth:"+repr(req.requires()))
+    req.write("<br />Wind Service: %s" % wind_service)
     req.write('<br /><a href="%s?%s=true">logout</a>' % (req.uri, LOGOUT_ARG))
     return apache.OK
