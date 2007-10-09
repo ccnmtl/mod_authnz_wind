@@ -1,14 +1,19 @@
-#version 0.9.4
+#version 0.9.5
 from mod_python import apache,util,Session
 import urllib,re
 
+#leave as empty string if this will be set in 'PythonOption WindService'
 WIND_SERVICE = '' #default Wind service= token
+
 LOGOUT_URL='https://wind.columbia.edu/logout'
 LOGIN_URL='https://wind.columbia.edu/login'
 VALIDATE_URL='https://wind.columbia.edu/validate'
 TICKET_ARG = 'ticketid'
 ALT_AUTH_ARG = 'nowindauth'
 LOGOUT_ARG = 'windlogout'
+
+#for mod_python<3.2, we set this at the top so the code below doesn't have to be modified
+DEFAULT_PROTOCOL = 'http'
 
 def authenhandler(req):
     if req.main is not None:
@@ -37,8 +42,8 @@ def authenhandler(req):
             del req.connection.notes['user']
         req.status=apache.HTTP_UNAUTHORIZED
         try:
-           session = Session.Session(req)
-           session.delete()
+           session = Session.Session(req, lock=0)
+           session.invalidate()
         except:
            pass
         util.redirect(req,LOGOUT_URL)
@@ -54,8 +59,14 @@ def authenhandler(req):
         req.groups = req.connection.notes['groups']
         return apache.OK
 
-    session = Session.Session(req)
-        
+    session = Session.Session(req, lock=0)
+
+    if session.is_new():
+	#since Session.Session() sends a pysid cookie
+	#we need to make sure that there's an entry in the db
+	#or mod_python won't always save the session data once auth'd
+        session.save()
+
     if session.has_key('user'):
         req.user=session['user']
         req.groups=session['groups']
@@ -124,20 +135,26 @@ def redirectWind(req):
                          req.unparsed_uri)
     destination = re.sub('\&(?=(\&|\Z))','',destination)
 
+    apache_options = req.get_options()
+
     port = ''
     protocol = 'http'
     if req.parsed_uri[5]:
         port = ':'+str(req.parsed_uri[5])
+
     try: #is_https() only in mod_python 3.2; try req.parsed_uri[0] for mod_python 3.1, but it doesn't always work
         if req.is_https():
             protocol = 'https'
     except:
-        apache.log_error( 'support for https requires mod_python 3.2', apache.APLOG_WARNING)
+	protocol = apache_options.get('HttpOrHttps',DEFAULT_PROTOCOL)
+        #apache.log_error( 'support for https requires mod_python 3.2', apache.APLOG_WARNING)
 
-    apache_options = req.get_options()
     wind_service = apache_options.get('WindService',WIND_SERVICE)
-    
-    util.redirect(req,LOGIN_URL+'?service=%s&destination=%s://%s%s%s' % ( wind_service,protocol,req.hostname,port,urllib.quote(destination) ))
+    redirect_url = LOGIN_URL+'?destination=%s://%s%s%s' % (protocol,req.hostname,port,urllib.quote(destination) )
+    if wind_service:
+        redirect_url = redirect_url + '&service=%s' % wind_service
+    util.redirect(req,redirect_url)
+
 
     
 def validate_wind_ticket(ticketid):
