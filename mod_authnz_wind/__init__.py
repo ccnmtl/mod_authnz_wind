@@ -1,4 +1,4 @@
-#version 0.9.5
+#version 0.9.6
 from mod_python import apache,util,Session
 import urllib,re
 
@@ -11,6 +11,7 @@ VALIDATE_URL='https://wind.columbia.edu/validate'
 TICKET_ARG = 'ticketid'
 ALT_AUTH_ARG = 'nowindauth'
 LOGOUT_ARG = 'windlogout'
+DEFAULT_USER_ANONYMOUS = "anonymous"
 
 #for mod_python<3.2, we set this at the top so the code below doesn't have to be modified
 DEFAULT_PROTOCOL = 'http'
@@ -20,7 +21,7 @@ def authenhandler(req):
         #defer to the main request's auth
         if getattr(req.main,'user',False):
             req.user = req.main.user
-                
+            
             if hasattr(req.main,'groups'):
                 req.groups = req.main.groups
             elif req.connection.notes.has_key('groups'):
@@ -37,27 +38,44 @@ def authenhandler(req):
     #at least in modpy 3.1 if there is a '//' after the domain, 
     #   it might not parse args correctly, and won't find LOGOUT_ARG
     if args.has_key(LOGOUT_ARG):
-        req.user=""
-        if req.connection.notes.has_key('user'):
-            del req.connection.notes['user']
-        req.status=apache.HTTP_UNAUTHORIZED
-        try:
-           session = Session.Session(req, lock=0)
-           session.invalidate()
-        except:
-           pass
-        util.redirect(req,LOGOUT_URL)
-
-    if args.has_key(ALT_AUTH_ARG):
-        #this 'feature' may be handy if we want to try basic auth too
-        #but it might not work (UNTESTED)
-        return apache.DECLINED
+        apache_options = req.get_options()
+        if apache_options.get('AnonymousPassthrough',False):
+            req.user=apache_options.get('AnonymousUser',DEFAULT_USER_ANONYMOUS)
+            req.groups=apache_options.get('AnonymousGroups','')
+            
+            req.connection.notes['user']=req.user
+            req.connection.notes['groups']=req.groups
+            try:
+                session = Session.Session(req, lock=0)
+                session.user=req.user
+                session.groups=req.groups
+                session.save()
+            except:
+                pass
+            return apache.OK
+        else:
+            req.user=""
+            req.groups=""
+            if req.connection.notes.has_key('user'):
+                del req.connection.notes['user']
+            req.status=apache.HTTP_UNAUTHORIZED
+            try:
+                session = Session.Session(req, lock=0)
+                session.invalidate()
+            except:
+                pass
+            util.redirect(req,LOGOUT_URL)
 
     if req.connection.notes.has_key('user'):
         #HACK:session only works per-request, and hangs when called by the same connection
         req.user = req.connection.notes['user']
         req.groups = req.connection.notes['groups']
         return apache.OK
+
+    if args.has_key(ALT_AUTH_ARG):
+        #this 'feature' may be handy if we want to try basic auth too
+        #but it might not work (UNTESTED)
+        return apache.DECLINED
 
     session = Session.Session(req, lock=0)
 
@@ -89,10 +107,20 @@ def authenhandler(req):
 
             session.save()
             return apache.OK
-        else:
-            redirectWind(req)
+
+    apache_options = req.get_options()
+    if apache_options.get('AnonymousPassthrough',False):
+        req.user=apache_options.get('AnonymousUser',DEFAULT_USER_ANONYMOUS)
+        req.groups=apache_options.get('AnonymousGroups','')
+        req.connection.notes['user']=req.user
+        req.connection.notes['groups']=req.groups
+        session.user=req.user
+        session.groups=req.groups
+        session.save()
+        return apache.OK
     else:
         redirectWind(req)
+
     #should never get here
     apache.log_error('unexpected condition')
     return apache.HTTP_UNAUTHORIZED

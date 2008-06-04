@@ -72,6 +72,26 @@ directory and set it up like:
 	#require user abc123 sbd12
 </Directory>
 
+ANONYMOUS PASSTHROUGH
+---------------------
+Sometimes you want Wind authentication to be 'optional'--only if someone
+has a wind account will they login and get privileged access.  Anonymous
+passthrough is enabled with:
+
+	#warning: setting it to 'False' still keeps it on, 
+	#if you set it to anything, it must be "" to disable
+	PythonOption AnonymousPassthrough True
+
+Then, the website is responsible for directing Wind users to authenticate.
+Until someone clicks to login with Wind, they are 'authenticated' as user
+"anonymous"  Both the anonymous username and anonymous groups are configurable
+with more python options:
+	#changes anonymous username to 'guest'
+	PythonOption AnonymousUser guest
+	#adds the groups 'student' and 'columbia' to an anonymous user
+	PythonOption AnonymousGroups student,columbia
+
+
 TROUBLESHOOTING
 ---------------
 1. Wind services are often url-specific.  If you're trying to set this up
@@ -81,6 +101,8 @@ TROUBLESHOOTING
 
 CHANGES
 -------
+version 0.9.6
+ - allow Anonymous passthrough 
 version 0.9.5
  - fixed locking bug triggered by Session.Session(req) observed occasionally in login/logout/re-login patterns
  - PythonOption HttpOrHttps so modpython 3.1 doesn't constantly give errors
