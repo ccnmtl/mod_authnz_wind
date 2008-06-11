@@ -101,6 +101,9 @@ TROUBLESHOOTING
 
 CHANGES
 -------
+version 0.9.7
+ - fix anonymous passthrough after anonymous session state 
+ - remove LOGOUT_ARG from wind login redirect url
 version 0.9.6
  - allow Anonymous passthrough 
 version 0.9.5

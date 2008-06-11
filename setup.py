@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="modwind",
-    version="0.9.6",
+    version="0.9.7",
     description="mod_python implementation of mod_wind",
     author="Schuyler Duveen",
     author_email="sky@columbia.edu",

@@ -1,4 +1,4 @@
-#version 0.9.6
+#version 0.9.7
 from mod_python import apache,util,Session
 import urllib,re
 
@@ -35,10 +35,11 @@ def authenhandler(req):
     if q is not None:
         args=util.parse_qs(q)
 
+    apache_options = req.get_options()
+    
     #at least in modpy 3.1 if there is a '//' after the domain, 
     #   it might not parse args correctly, and won't find LOGOUT_ARG
     if args.has_key(LOGOUT_ARG):
-        apache_options = req.get_options()
         if apache_options.get('AnonymousPassthrough',False):
             req.user=apache_options.get('AnonymousUser',DEFAULT_USER_ANONYMOUS)
             req.groups=apache_options.get('AnonymousGroups','')
@@ -66,11 +67,17 @@ def authenhandler(req):
                 pass
             util.redirect(req,LOGOUT_URL)
 
+    anonymous_switch = apache_options.get('AnonymousPassthrough',False) \
+                       and args.has_key(TICKET_ARG) 
+
+    anon_user = apache_options.get('AnonymousUser',DEFAULT_USER_ANONYMOUS)
+
     if req.connection.notes.has_key('user'):
         #HACK:session only works per-request, and hangs when called by the same connection
         req.user = req.connection.notes['user']
         req.groups = req.connection.notes['groups']
-        return apache.OK
+        if not (anonymous_switch and req.user == anon_user):
+            return apache.OK
 
     if args.has_key(ALT_AUTH_ARG):
         #this 'feature' may be handy if we want to try basic auth too
@@ -90,7 +97,8 @@ def authenhandler(req):
         req.groups=session['groups']
         req.connection.notes['user']=req.user
         req.connection.notes['groups']=getattr(req,'groups','')
-        return apache.OK
+        if not (anonymous_switch and req.user == anon_user):
+            return apache.OK
 
     if args.has_key(TICKET_ARG):
         ticket=args[TICKET_ARG][-1]
@@ -108,7 +116,6 @@ def authenhandler(req):
             session.save()
             return apache.OK
 
-    apache_options = req.get_options()
     if apache_options.get('AnonymousPassthrough',False):
         req.user=apache_options.get('AnonymousUser',DEFAULT_USER_ANONYMOUS)
         req.groups=apache_options.get('AnonymousGroups','')
@@ -158,9 +165,17 @@ def redirectWind(req):
     """redirects session to Wind server"""
     req.user=""
     req.status=apache.HTTP_UNAUTHORIZED
+
+    util.redirect(req,wind_login_url(req))
+
+
+def wind_login_url(req):
     destination = re.sub('(?<=[&?])'+TICKET_ARG+'=.*?(\&|\Z)',
                          '',
                          req.unparsed_uri)
+    destination = re.sub('(?<=[&?])'+LOGOUT_ARG+'=.*?(\&|\Z)',
+                         '',
+                         destination)
     destination = re.sub('\&(?=(\&|\Z))','',destination)
 
     apache_options = req.get_options()
@@ -181,9 +196,7 @@ def redirectWind(req):
     redirect_url = LOGIN_URL+'?destination=%s://%s%s%s' % (protocol,req.hostname,port,urllib.quote(destination) )
     if wind_service:
         redirect_url = redirect_url + '&service=%s' % wind_service
-    util.redirect(req,redirect_url)
-
-
+    return redirect_url
     
 def validate_wind_ticket(ticketid):
     """
@@ -220,5 +233,15 @@ def handler(req):
     req.write("Groups: %s\n" % req.groups)
     req.write("<br />Required auth:"+repr(req.requires()))
     req.write("<br />Wind Service: %s" % wind_service)
-    req.write('<br /><a href="%s?%s=true">logout</a>' % (req.uri, LOGOUT_ARG))
+    
+    if apache_options.get('AnonymousPassthrough',False):
+        anon_user = apache_options.get('AnonymousUser',DEFAULT_USER_ANONYMOUS)
+        req.write('<p><b>anonymous user</b>:%s</p>' % anon_user)
+        if req.user==anon_user:
+            req.write('<br /><a href="%s">login</a>' % wind_login_url(req))
+        else:
+            req.write('<br /><a href="%s?%s=true">logout</a>' % (req.uri, LOGOUT_ARG))
+    else:
+        req.write('<br /><a href="%s?%s=true">logout</a>' % (req.uri, LOGOUT_ARG))
+
     return apache.OK
